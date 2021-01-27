@@ -12,17 +12,24 @@ Parameters:
   GitHubRepoBranch:
     Description: Repo branch to be synced to this pipeline
     Type: String
+    AllowedValues:
+    - develop
+    - master
   TemplateFileName:
     Description: Template file name to be executed in DeployCFN Step
     Type: String
     Default: template.yml
-  TemplateConfigFileName:
-    Description: Template config file name to be executed in DeployCFN Step
+  PipelineArtifactsBucketName:
+    Description: Bucket onde sera armazenado os artefatos das pipelines
     Type: String
-    Default: template-parameters.json
+    Default: gft-gmatsud-pipeline-artifacts
   KMSKeyArn:
     Description: KMS Key ARN
     Type: String
+
+Conditions:
+  CondBranchDevelop: !Equals [ !Ref GitHubRepoBranch, develop ]
+  CondBranchMaster: !Equals [ !Ref GitHubRepoBranch, master ]
 
 Resources:
   CodePipelinePolicy:
@@ -241,13 +248,14 @@ Resources:
           Status: DISABLED
           EncryptionDisabled: False
 
-  Pipeline:
+  PipelineDevelop:
+    Condition: CondBranchDevelop
     Type: AWS::CodePipeline::Pipeline
     Properties:
       Name: !Sub "${PipelineName}-${GitHubRepoBranch}"
       ArtifactStore: 
         Type: S3
-        Location: codepipeline-sa-east-1-975789338342
+        Location: !Ref PipelineArtifactsBucketName
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages: 
       - Name: Source
@@ -286,9 +294,9 @@ Resources:
             - Name: SourceArtifact
           Region: !Ref AWS::Region
           Namespace: BuildVariables
-      - Name: Deploy
+      - Name: Deploy-Dev
         Actions:
-        - Name: DeployCFN
+        - Name: DeployCFN-Dev
           ActionTypeId:
             Category: Deploy
             Owner: AWS
@@ -300,9 +308,93 @@ Resources:
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt CloudFormationRole.Arn
             StackName: !Sub "stack-${PipelineName}-dev"
-            TemplateConfiguration: !Sub "SourceArtifact::${TemplateConfigFileName}"
+            TemplateConfiguration: "SourceArtifact::parameters-dev.json"
             TemplatePath: !Sub "SourceArtifact::${TemplateFileName}"
           InputArtifacts:
           - Name: SourceArtifact
           Region: !Ref AWS::Region
 
+  PipelineMaster:
+    Condition: CondBranchMaster
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub "${PipelineName}-${GitHubRepoBranch}"
+      ArtifactStore: 
+        Type: S3
+        Location: !Ref PipelineArtifactsBucketName
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      Stages: 
+      - Name: Source
+        Actions:
+        - Name: Source
+          ActionTypeId:
+            Category: Source
+            Owner: AWS
+            Provider: CodeStarSourceConnection
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            BranchName: !Ref GitHubRepoBranch
+            ConnectionArn: !Ref GitHubConnectionArn
+            DetectChanges: True
+            FullRepositoryId: !Ref GitHubRepo
+            OutputArtifactFormat: CODE_ZIP
+          OutputArtifacts:
+            - Name: SourceArtifact
+          Region: !Ref AWS::Region
+          Namespace: SourceVariables
+      - Name: CFN-Lint
+        Actions:
+        - Name: !Ref CodeBuildCfnLintProject
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Provider: CodeBuild
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ProjectName: !Ref CodeBuildCfnLintProject
+          OutputArtifacts:
+            - Name: BuildArtifact
+          InputArtifacts:
+            - Name: SourceArtifact
+          Region: !Ref AWS::Region
+          Namespace: BuildVariables
+      - Name: Deploy-Hml
+        Actions:
+        - Name: DeployCFN-Hml
+          ActionTypeId:
+            Category: Deploy
+            Owner: AWS
+            Provider: CloudFormation
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ActionMode: CREATE_UPDATE
+            Capabilities: CAPABILITY_NAMED_IAM
+            RoleArn: !GetAtt CloudFormationRole.Arn
+            StackName: !Sub "stack-${PipelineName}-hml"
+            TemplateConfiguration: "SourceArtifact::parameters-hml.json"
+            TemplatePath: !Sub "SourceArtifact::${TemplateFileName}"
+          InputArtifacts:
+          - Name: SourceArtifact
+          Region: !Ref AWS::Region
+      - Name: Deploy-Prd
+        Actions:
+        - Name: DeployCFN-Prd
+          ActionTypeId:
+            Category: Deploy
+            Owner: AWS
+            Provider: CloudFormation
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ActionMode: CREATE_UPDATE
+            Capabilities: CAPABILITY_NAMED_IAM
+            RoleArn: !GetAtt CloudFormationRole.Arn
+            StackName: !Sub "stack-${PipelineName}-prd"
+            TemplateConfiguration: "SourceArtifact::parameters-prd.json"
+            TemplatePath: !Sub "SourceArtifact::${TemplateFileName}"
+          InputArtifacts:
+          - Name: SourceArtifact
+          Region: !Ref AWS::Region
