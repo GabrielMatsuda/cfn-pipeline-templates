@@ -216,7 +216,7 @@ Resources:
   CodeBuildCfnLintProject:
     Type: AWS::CodeBuild::Project
     Properties: 
-      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}-{AWS::StackName}"
+      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}"
       ServiceRole: !Ref CodeBuildCfnLintRole
       Source:
         Type: GITHUB
