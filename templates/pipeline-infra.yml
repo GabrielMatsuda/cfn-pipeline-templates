@@ -165,7 +165,7 @@ Resources:
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CodePipelineRole${AWS::StackId}"
+      RoleName: !Sub "CodePipelineRole${AWS::StackName}"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -182,7 +182,7 @@ Resources:
   CodeBuildCfnLintRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CodeBuildCfnLintRole${AWS::StackId}"
+      RoleName: !Sub "CodeBuildCfnLintRole${AWS::StackName}"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -199,7 +199,7 @@ Resources:
   CloudFormationRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CloudFormationRole${AWS::StackId}"
+      RoleName: !Sub "CloudFormationRole${AWS::StackName}"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -216,7 +216,7 @@ Resources:
   CodeBuildCfnLintProject:
     Type: AWS::CodeBuild::Project
     Properties: 
-      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}-{AWS::StackId}"
+      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}-{AWS::StackName}"
       ServiceRole: !Ref CodeBuildCfnLintRole
       Source:
         Type: GITHUB
