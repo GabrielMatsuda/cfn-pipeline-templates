@@ -252,7 +252,7 @@ Resources:
     Condition: CondBranchDevelop
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Sub "${PipelineName}-${GitHubRepoBranch}-${AWS::StackId}"
+      Name: !Sub "${PipelineName}-${GitHubRepoBranch}"
       ArtifactStore: 
         Type: S3
         Location: !Ref PipelineArtifactsBucketName
@@ -318,7 +318,7 @@ Resources:
     Condition: CondBranchMaster
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Sub "${PipelineName}-${GitHubRepoBranch}-${AWS::StackId}"
+      Name: !Sub "${PipelineName}-${GitHubRepoBranch}"
       ArtifactStore: 
         Type: S3
         Location: !Ref PipelineArtifactsBucketName
