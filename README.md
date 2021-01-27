@@ -8,3 +8,4 @@ aws cloudformation update-stack --stack-name pipeline-control --template-body fi
 
 aws cloudformation delete-stack --stack-name pipeline-control --region sa-east-1
 
+
