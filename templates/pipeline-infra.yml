@@ -1,0 +1,305 @@
+Parameters:
+  KMSKeyArn:
+    Description: KMS Key ARN
+    Type: String
+    Default: arn:aws:kms:sa-east-1:807339082933:alias/aws/s3
+  GitPersonalAccessToken:
+    Description: GitHub Credential Access Token
+    Type: String
+    Default: 850227a9047acca28f692a65038b96c57968e1f0
+
+Resources:
+  CodePipelinePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub "QCodePipelinePolicy-${AWS::StackName}"
+      Roles: 
+        - !Ref CodePipelineRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+            - iam:PassRole
+            Resource: "*"
+            Effect: Allow
+            Condition:
+              StringEqualsIfExists:
+                iam:PassedToService:
+                - cloudformation.amazonaws.com
+                - elasticbeanstalk.amazonaws.com
+                - ec2.amazonaws.com
+                - ecs-tasks.amazonaws.com
+          - Action:
+            - codecommit:CancelUploadArchive
+            - codecommit:GetBranch
+            - codecommit:GetCommit
+            - codecommit:GetRepository
+            - codecommit:GetUploadArchiveStatus
+            - codecommit:UploadArchive
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - codedeploy:CreateDeployment
+            - codedeploy:GetApplication
+            - codedeploy:GetApplicationRevision
+            - codedeploy:GetDeployment
+            - codedeploy:GetDeploymentConfig
+            - codedeploy:RegisterApplicationRevision
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - codestar-connections:UseConnection
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - elasticbeanstalk:*
+            - ec2:*
+            - elasticloadbalancing:*
+            - autoscaling:*
+            - cloudwatch:*
+            - s3:*
+            - sns:*
+            - cloudformation:*
+            - rds:*
+            - sqs:*
+            - ecs:*
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - lambda:InvokeFunction
+            - lambda:ListFunctions
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - opsworks:CreateDeployment
+            - opsworks:DescribeApps
+            - opsworks:DescribeCommands
+            - opsworks:DescribeDeployments
+            - opsworks:DescribeInstances
+            - opsworks:DescribeStacks
+            - opsworks:UpdateApp
+            - opsworks:UpdateStack
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - cloudformation:CreateStack
+            - cloudformation:DeleteStack
+            - cloudformation:DescribeStacks
+            - cloudformation:UpdateStack
+            - cloudformation:CreateChangeSet
+            - cloudformation:DeleteChangeSet
+            - cloudformation:DescribeChangeSet
+            - cloudformation:ExecuteChangeSet
+            - cloudformation:SetStackPolicy
+            - cloudformation:ValidateTemplate
+            Resource: "*"
+            Effect: Allow
+          - Action:
+            - codebuild:BatchGetBuilds
+            - codebuild:StartBuild
+            - codebuild:BatchGetBuildBatches
+            - codebuild:StartBuildBatch
+            Resource: "*"
+            Effect: Allow
+          - Effect: Allow
+            Action:
+            - devicefarm:ListProjects
+            - devicefarm:ListDevicePools
+            - devicefarm:GetRun
+            - devicefarm:GetUpload
+            - devicefarm:CreateUpload
+            - devicefarm:ScheduleRun
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - servicecatalog:ListProvisioningArtifacts
+            - servicecatalog:CreateProvisioningArtifact
+            - servicecatalog:DescribeProvisioningArtifact
+            - servicecatalog:DeleteProvisioningArtifact
+            - servicecatalog:UpdateProduct
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - cloudformation:ValidateTemplate
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - ecr:DescribeImages
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - states:DescribeExecution
+            - states:DescribeStateMachine
+            - states:StartExecution
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - appconfig:StartDeployment
+            - appconfig:StopDeployment
+            - appconfig:GetDeployment
+            Resource: "*"
+
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "CodePipelineRole-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - codepipeline.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "CloudFormationRole-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - cloudformation.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CodeBuildCfnLintRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "CodeBuildCfnLintRole-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - codebuild.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CodeBuildCfnLintProject:
+    Type: AWS::CodeBuild::Project
+    Properties: 
+      Name: !Sub "cfn-lint-${AWS::StackName}"
+      ServiceRole: !Ref CodeBuildCfnLintRole
+      Source:
+        Type: GITHUB
+        BuildSpec: "version: 0.2\n\nphases:\n  pre_build:\n    commands:\n       - python --version\n       - pip install cfn-lint\n  build:\n    commands:\n       - cfn-lint template.yaml\n"
+        GitCloneDepth: 1
+        GitSubmodulesConfig: 
+          FetchSubmodules: False
+        InsecureSsl: False
+        Location: https://github.com/GabrielMatsuda/cfn-ecscluster
+        ReportBuildStatus: False
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        Type: LINUX_CONTAINER
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: True
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Ref KMSKeyArn
+      BadgeEnabled: False
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: False
+
+  GitHubCredentials:
+    Type: AWS::CodeBuild::SourceCredential
+    Properties: 
+      AuthType: PERSONAL_ACCESS_TOKEN
+      ServerType: GITHUB
+      Token: !Ref GitPersonalAccessToken
+
+  GitHubConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties: 
+      ConnectionName: GitHubSourceRepo
+      ProviderType: GitHub
+
+  PipelineMaster:
+    Type: AWS::CodePipeline::Pipeline
+    Properties: 
+      ArtifactStore: 
+        Type: S3
+        Location: codepipeline-sa-east-1-975789338342
+      Name: !Sub "pipeline-${AWS::StackName}"
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      Stages: 
+      - Name: Source
+        Actions:
+        - Name: Source
+          ActionTypeId:
+            Category: Source
+            Owner: AWS
+            Provider: CodeStarSourceConnection
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            BranchName: master
+            ConnectionArn: !Ref GitHubConnection
+            DetectChanges: True
+            FullRepositoryId: GabrielMatsuda/cfn-ecscluster
+            OutputArtifactFormat: CODE_ZIP
+          OutputArtifacts:
+            - Name: SourceArtifact
+          Region: !Ref AWS::Region
+          Namespace: SourceVariables
+      - Name: CFN-Lint
+        Actions:
+        - Name: !Ref CodeBuildCfnLintProject
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Provider: CodeBuild
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ProjectName: !Ref CodeBuildCfnLintProject
+          OutputArtifacts:
+            - Name: BuildArtifact
+          InputArtifacts:
+            - Name: SourceArtifact
+          Region: !Ref AWS::Region
+          Namespace: BuildVariables
+      - Name: Deploy
+        Actions:
+        - Name: DeployCFN
+          ActionTypeId:
+            Category: Deploy
+            Owner: AWS
+            Provider: CloudFormation
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ActionMode: CREATE_UPDATE
+            Capabilities: CAPABILITY_NAMED_IAM
+            RoleArn: !GetAtt CloudFormationRole.Arn
+            StackName: my-infrastructure
+            TemplateConfiguration: SourceArtifact::template-parameters.json
+            TemplatePath: SourceArtifact::template.yaml
+          InputArtifacts:
+          - Name: SourceArtifact
+          Region: !Ref AWS::Region
+
