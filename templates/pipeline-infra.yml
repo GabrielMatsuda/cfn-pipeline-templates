@@ -35,7 +35,7 @@ Resources:
   CodePipelinePolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub "CodePipelinePolicy-${AWS::StackName}"
+      PolicyName: !Sub "CodePipelinePolicy-{AWS::StackId}"
       Roles: 
         - !Ref CodePipelineRole
       PolicyDocument:
@@ -165,7 +165,7 @@ Resources:
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CodePipelineRole-${AWS::StackName}"
+      RoleName: !Sub "CodePipelineRole-{AWS::StackId}"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -182,7 +182,7 @@ Resources:
   CodeBuildCfnLintRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CodeBuildCfnLintRole-${AWS::StackName}"
+      RoleName: !Sub "CodeBuildCfnLintRole-{AWS::StackId}"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -199,7 +199,7 @@ Resources:
   CloudFormationRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CloudFormationRole-${AWS::StackName}"
+      RoleName: !Sub "CloudFormationRole-{AWS::StackId}"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -216,7 +216,7 @@ Resources:
   CodeBuildCfnLintProject:
     Type: AWS::CodeBuild::Project
     Properties: 
-      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}"
+      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}-{AWS::StackId}"
       ServiceRole: !Ref CodeBuildCfnLintRole
       Source:
         Type: GITHUB
@@ -252,7 +252,7 @@ Resources:
     Condition: CondBranchDevelop
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Sub "${PipelineName}-${GitHubRepoBranch}"
+      Name: !Sub "${PipelineName}-${GitHubRepoBranch}-{AWS::StackId}"
       ArtifactStore: 
         Type: S3
         Location: !Ref PipelineArtifactsBucketName
@@ -318,7 +318,7 @@ Resources:
     Condition: CondBranchMaster
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Sub "${PipelineName}-${GitHubRepoBranch}"
+      Name: !Sub "${PipelineName}-${GitHubRepoBranch}-{AWS::StackId}"
       ArtifactStore: 
         Type: S3
         Location: !Ref PipelineArtifactsBucketName
