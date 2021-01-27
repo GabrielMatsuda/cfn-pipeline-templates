@@ -31,6 +31,8 @@ Conditions:
   CondBranchDevelop: !Equals [ !Ref GitHubRepoBranch, develop ]
   CondBranchMaster: !Equals [ !Ref GitHubRepoBranch, master ]
 
+
+
 Resources:
   CodePipelinePolicy:
     Type: AWS::IAM::Policy
