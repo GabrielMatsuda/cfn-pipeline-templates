@@ -1,4 +1,4 @@
-# cfn-pipeline-control
+# cfn-pipeline-templates
 
 
 1- Criar manualmente Stack para inicializacao de credenciaos e pipeline para CI/CD de templates de pipeline
