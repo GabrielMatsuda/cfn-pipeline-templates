@@ -398,3 +398,4 @@ Resources:
           InputArtifacts:
           - Name: SourceArtifact
           Region: !Ref AWS::Region
+
