@@ -7,10 +7,10 @@ Parameters:
     Type: String
     Default: arn:aws:codestar-connections:sa-east-1:807339082933:connection/79dab327-acb5-4ad4-821c-7b63adf4dbee
   GitHubRepo:
-    Description: Repository to be synced to this pipeline.
+    Description: Repository to be synced to this pipeline
     Type: String
   GitHubRepoBranch:
-    Description: Repo branch to be synced to this pipeline.
+    Description: Repo branch to be synced to this pipeline
     Type: String
     AllowedValues:
     - develop
