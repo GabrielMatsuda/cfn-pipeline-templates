@@ -243,7 +243,7 @@ Resources:
   CodeBuildUploadToS3:
     Type: AWS::CodeBuild::Project
     Properties: 
-      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}"
+      Name: !Sub "UploadToS3-${PipelineName}-${GitHubRepoBranch}"
       ServiceRole: !Ref CodeBuildCfnLintRole
       Source:
         Type: NO_SOURCE
