@@ -32,189 +32,11 @@ Conditions:
   CondBranchMaster: !Equals [ !Ref GitHubRepoBranch, master ]
 
 Resources:
-  CodePipelinePolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub "CodePipelinePolicy${AWS::StackName}"
-      Roles: 
-        - !Ref CodePipelineRole
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Action:
-            - iam:PassRole
-            Resource: "*"
-            Effect: Allow
-            Condition:
-              StringEqualsIfExists:
-                iam:PassedToService:
-                - cloudformation.amazonaws.com
-                - elasticbeanstalk.amazonaws.com
-                - ec2.amazonaws.com
-                - ecs-tasks.amazonaws.com
-          - Action:
-            - codecommit:CancelUploadArchive
-            - codecommit:GetBranch
-            - codecommit:GetCommit
-            - codecommit:GetRepository
-            - codecommit:GetUploadArchiveStatus
-            - codecommit:UploadArchive
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - codedeploy:CreateDeployment
-            - codedeploy:GetApplication
-            - codedeploy:GetApplicationRevision
-            - codedeploy:GetDeployment
-            - codedeploy:GetDeploymentConfig
-            - codedeploy:RegisterApplicationRevision
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - codestar-connections:UseConnection
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - elasticbeanstalk:*
-            - ec2:*
-            - elasticloadbalancing:*
-            - autoscaling:*
-            - cloudwatch:*
-            - s3:*
-            - sns:*
-            - cloudformation:*
-            - rds:*
-            - sqs:*
-            - ecs:*
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - lambda:InvokeFunction
-            - lambda:ListFunctions
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - opsworks:CreateDeployment
-            - opsworks:DescribeApps
-            - opsworks:DescribeCommands
-            - opsworks:DescribeDeployments
-            - opsworks:DescribeInstances
-            - opsworks:DescribeStacks
-            - opsworks:UpdateApp
-            - opsworks:UpdateStack
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - cloudformation:CreateStack
-            - cloudformation:DeleteStack
-            - cloudformation:DescribeStacks
-            - cloudformation:UpdateStack
-            - cloudformation:CreateChangeSet
-            - cloudformation:DeleteChangeSet
-            - cloudformation:DescribeChangeSet
-            - cloudformation:ExecuteChangeSet
-            - cloudformation:SetStackPolicy
-            - cloudformation:ValidateTemplate
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - codebuild:BatchGetBuilds
-            - codebuild:StartBuild
-            - codebuild:BatchGetBuildBatches
-            - codebuild:StartBuildBatch
-            Resource: "*"
-            Effect: Allow
-          - Effect: Allow
-            Action:
-            - devicefarm:ListProjects
-            - devicefarm:ListDevicePools
-            - devicefarm:GetRun
-            - devicefarm:GetUpload
-            - devicefarm:CreateUpload
-            - devicefarm:ScheduleRun
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - servicecatalog:ListProvisioningArtifacts
-            - servicecatalog:CreateProvisioningArtifact
-            - servicecatalog:DescribeProvisioningArtifact
-            - servicecatalog:DeleteProvisioningArtifact
-            - servicecatalog:UpdateProduct
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - cloudformation:ValidateTemplate
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - ecr:DescribeImages
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - states:DescribeExecution
-            - states:DescribeStateMachine
-            - states:StartExecution
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - appconfig:StartDeployment
-            - appconfig:StopDeployment
-            - appconfig:GetDeployment
-            Resource: "*"
-
-  CodePipelineRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-              - codepipeline.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-
-  CodeBuildCfnLintRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-              - codebuild.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-
-  CloudFormationRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-              - cloudformation.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-
   CodeBuildCfnLintProject:
     Type: AWS::CodeBuild::Project
     Properties: 
       Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}"
-      ServiceRole: !Ref CodeBuildCfnLintRole
+      ServiceRole: "{{resolve:ssm:/pipeline/CodeBuildRoleArn:1}}"
       Source:
         Type: NO_SOURCE
         BuildSpec: "version: 0.2\n\nphases:\n  pre_build:\n    commands:\n       - python --version\n       - pip install cfn-lint\n  build:\n    commands:\n       - ls\n       - cfn-lint *.yml\n"
@@ -248,7 +70,7 @@ Resources:
       ArtifactStore: 
         Type: S3
         Location: !Ref PipelineArtifactsBucketName
-      RoleArn: !GetAtt CodePipelineRole.Arn
+      RoleArn: "{{resolve:ssm:/pipeline/CodePipelineRoleArn:1}}"
       Stages: 
       - Name: Source
         Actions:
@@ -298,7 +120,7 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             Capabilities: CAPABILITY_NAMED_IAM
-            RoleArn: !GetAtt CloudFormationRole.Arn
+            RoleArn: "{{resolve:ssm:/pipeline/CloudFormationRoleArn:1}}"
             StackName: !Sub "stack-${PipelineName}-dev"
             TemplateConfiguration: "SourceArtifact::parameters-dev.json"
             TemplatePath: !Sub "SourceArtifact::${TemplateFileName}"
@@ -314,7 +136,7 @@ Resources:
       ArtifactStore: 
         Type: S3
         Location: !Ref PipelineArtifactsBucketName
-      RoleArn: !GetAtt CodePipelineRole.Arn
+      RoleArn: "{{resolve:ssm:/pipeline/CodePipelineRoleArn:1}}"
       Stages: 
       - Name: Source
         Actions:
@@ -364,7 +186,7 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             Capabilities: CAPABILITY_NAMED_IAM
-            RoleArn: !GetAtt CloudFormationRole.Arn
+            RoleArn: "{{resolve:ssm:/pipeline/CloudFormationRoleArn:1}}"
             StackName: !Sub "stack-${PipelineName}-hml"
             TemplateConfiguration: "SourceArtifact::parameters-hml.json"
             TemplatePath: !Sub "SourceArtifact::${TemplateFileName}"
@@ -383,7 +205,7 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             Capabilities: CAPABILITY_NAMED_IAM
-            RoleArn: !GetAtt CloudFormationRole.Arn
+            RoleArn: "{{resolve:ssm:/pipeline/CloudFormationRoleArn:1}}"
             StackName: !Sub "stack-${PipelineName}-prd"
             TemplateConfiguration: "SourceArtifact::parameters-prd.json"
             TemplatePath: !Sub "SourceArtifact::${TemplateFileName}"
