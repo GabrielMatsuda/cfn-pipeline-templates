@@ -219,14 +219,9 @@ Resources:
       Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}"
       ServiceRole: !Ref CodeBuildCfnLintRole
       Source:
-        Type: GITHUB
-        BuildSpec: "version: 0.2\n\nphases:\n  pre_build:\n    commands:\n       - python --version\n       - pip install cfn-lint\n  build:\n    commands:\n       - cfn-lint *.yml\n"
-        GitCloneDepth: 1
-        GitSubmodulesConfig: 
-          FetchSubmodules: False
+        Type: NO_SOURCE
+        BuildSpec: "version: 0.2\n\nphases:\n  pre_build:\n    commands:\n       - python --version\n       - pip install cfn-lint\n  build:\n    commands:\n       - ls\n       - cfn-lint *.yml\n"
         InsecureSsl: False
-        Location: !Sub "https://github.com/${GitHubRepo}"
-        ReportBuildStatus: False
       Artifacts:
         Type: NO_ARTIFACTS
       Cache:
