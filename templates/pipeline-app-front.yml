@@ -348,7 +348,7 @@ Resources:
           InputArtifacts:
             - Name: SourceArtifact
           Region: !Ref AWS::Region
-          Namespace: BuildVariables
+          Namespace: UploadToS3Bucket-Dev
 
   PipelineMaster:
     Condition: CondBranchMaster
@@ -428,7 +428,7 @@ Resources:
           InputArtifacts:
             - Name: SourceArtifact
           Region: !Ref AWS::Region
-          Namespace: BuildVariables
+          Namespace: UploadToS3Bucket-Hml
       - Name: Deploy-Prd
         Actions:
         - Name: DeployCFN-Prd
@@ -461,4 +461,4 @@ Resources:
           InputArtifacts:
             - Name: SourceArtifact
           Region: !Ref AWS::Region
-          Namespace: BuildVariables
+          Namespace: UploadToS3Bucket-Prd
