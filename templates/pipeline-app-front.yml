@@ -243,6 +243,36 @@ Resources:
           Status: DISABLED
           EncryptionDisabled: False
 
+  CodeBuildUploadToS3:
+    Type: AWS::CodeBuild::Project
+    Properties: 
+      Name: !Sub "CfnLint-${PipelineName}-${GitHubRepoBranch}"
+      ServiceRole: !Ref CodeBuildCfnLintRole
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: "version: 0.2\n\nphases:\n  pre_build:\n    commands:\n       - apt-get install jq\n      # - command\n  build:\n    commands:\n      - ls\n      - export MYBUCKET=$(jq -r .Parameters.BucketName parameters-$stage.json)\n      - echo $MYBUCKET\n      - aws s3 sync app/ s3://$MYBUCKET/ --acl public-read\n"
+        InsecureSsl: False
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        Type: LINUX_CONTAINER
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: True
+      TimeoutInMinutes: 60
+      QueuedTimeoutInMinutes: 480
+      EncryptionKey: !Ref KMSKeyArn
+      BadgeEnabled: False
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: False
+
   PipelineDevelop:
     Condition: CondBranchDevelop
     Type: AWS::CodePipeline::Pipeline
@@ -308,6 +338,20 @@ Resources:
           InputArtifacts:
           - Name: SourceArtifact
           Region: !Ref AWS::Region
+        - Name: UploadToS3Bucket-Dev
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Provider: CodeBuild
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ProjectName: !Ref CodeBuildUploadToS3
+            EnvironmentVariables: "[{\"name\":\"stage\",\"value\":\"dev\",\"type\":\"PLAINTEXT\"}]"
+          InputArtifacts:
+            - Name: SourceArtifact
+          Region: !Ref AWS::Region
+          Namespace: BuildVariables
 
   PipelineMaster:
     Condition: CondBranchMaster
@@ -374,6 +418,20 @@ Resources:
           InputArtifacts:
           - Name: SourceArtifact
           Region: !Ref AWS::Region
+        - Name: UploadToS3Bucket-Hml
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Provider: CodeBuild
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ProjectName: !Ref CodeBuildUploadToS3
+            EnvironmentVariables: "[{\"name\":\"stage\",\"value\":\"hml\",\"type\":\"PLAINTEXT\"}]"
+          InputArtifacts:
+            - Name: SourceArtifact
+          Region: !Ref AWS::Region
+          Namespace: BuildVariables
       - Name: Deploy-Prd
         Actions:
         - Name: DeployCFN-Prd
@@ -393,3 +451,17 @@ Resources:
           InputArtifacts:
           - Name: SourceArtifact
           Region: !Ref AWS::Region
+        - Name: UploadToS3Bucket-Prd
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Provider: CodeBuild
+            Version: '1'
+          RunOrder: 1
+          Configuration:
+            ProjectName: !Ref CodeBuildUploadToS3
+            EnvironmentVariables: "[{\"name\":\"stage\",\"value\":\"prd\",\"type\":\"PLAINTEXT\"}]"
+          InputArtifacts:
+            - Name: SourceArtifact
+          Region: !Ref AWS::Region
+          Namespace: BuildVariables
